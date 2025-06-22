@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Artist Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f7fa;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    input, button {
+      padding: 10px;
+      margin-top: 8px;
+      width: 100%;
+      font-size: 16px;
+    }
+    #dashboard {
+      display: none;
+    }
+    ul {
+      padding-left: 20px;
+    }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <h1>Music Royalty Dashboard</h1>
+  <div id="login">
+    <button onclick="signIn()">Sign in with Google</button>
+  </div>
+
+  <div id="dashboard">
+    <p><strong>Welcome:</strong> <span id="user-email"></span></p>
+    <p><strong>Balance:</strong> $<span id="balance">0.00</span></p>
+
+    <h2>Request a Payout</h2>
+    <input type="number" id="payoutAmount" placeholder="Enter amount" />
+    <button onclick="requestPayout()">Submit Request</button>
+
+    <h2>Your Past Requests</h2>
+    <ul id="requestList"></ul>
+
+    <button onclick="signOut()">Sign Out</button>
+  </div>
+
+  <script>
+    // 🔧 Paste your Firebase config below
+    const firebaseConfig = {
+      apiKey: "AIzaSyCS-ykifZL2-fhDVuI13t8WYV3a0ZYEfTQ",
+      authDomain: "musicroyaltydashboard.firebaseapp.com",
+      projectId: "musicroyaltydashboard",
+      storageBucket: "musicroyaltydashboard.firebasestorage.app",
+      messagingSenderId: "11241137292",
+      appId: "1:11241137292:web:06a7d43d5b555f417087a9"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Sign in with Google
+    function signIn() {
+      auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    }
+
+    function signOut() {
+      auth.signOut();
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        document.getElementById("user-email").textContent = user.email;
+
+        const userRef = db.collection("users").doc(user.uid);
+
+        // Create user doc if not exists
+        const doc = await userRef.get();
+        if (!doc.exists) {
+          await userRef.set({ email: user.email, balance: 0 });
+        }
+
+        // Show balance
+        userRef.onSnapshot((snap) => {
+          const data = snap.data();
+          document.getElementById("balance").textContent = data.balance.toFixed(2);
+        });
+
+        // Load payout requests
+        db.collection("payoutRequests")
+          .where("uid", "==", user.uid)
+          .orderBy("timestamp", "desc")
+          .onSnapshot((snap) => {
+            const list = document.getElementById("requestList");
+            list.innerHTML = "";
+            snap.forEach((doc) => {
+              const r = doc.data();
+              const li = document.createElement("li");
+              li.textContent = `$${r.amount} - ${r.status}`;
+              list.appendChild(li);
+            });
+          });
+
+      } else {
+        document.getElementById("login").style.display = "block";
+        document.getElementById("dashboard").style.display = "none";
+      }
+    });
+
+    function requestPayout() {
+      const user = auth.currentUser;
+      const amount = parseFloat(document.getElementById("payoutAmount").value);
+      if (!amount || amount <= 0) return alert("Enter a valid amount");
+
+      db.collection("payoutRequests").add({
+        uid: user.uid,
+        email: user.email,
+        amount,
+        status: "Pending",
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        alert("Payout request submitted.");
+        document.getElementById("payoutAmount").value = "";
+      });
+    }
+  </script>
+</body>
+</html>
