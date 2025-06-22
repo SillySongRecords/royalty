@@ -1,31 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Artist Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>Music Royalty Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+    }
     body {
-      font-family: sans-serif;
-      max-width: 600px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4fb;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    main {
+      max-width: 800px;
       margin: 40px auto;
       padding: 20px;
-      background: #f5f7fa;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgb(0 0 0 / 0.1);
     }
-    h1, h2 {
-      color: #333;
+    h1 {
+      color: #0a64c8;
+      font-weight: 700;
+      margin-bottom: 0.25em;
     }
-    input, button {
-      padding: 10px;
-      margin-top: 8px;
+    h2 {
+      color: #0a64c8;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    button {
+      background-color: #0a64c8;
+      color: white;
+      border: none;
+      padding: 0.75em 1.25em;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: #084ea4;
+    }
+    input[type=number] {
       width: 100%;
-      font-size: 16px;
+      padding: 0.75em 1em;
+      font-size: 1rem;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      outline-offset: 2px;
+      margin-top: 0.5em;
+      margin-bottom: 1em;
+      transition: border-color 0.2s ease;
     }
-    #dashboard {
-      display: none;
+    input[type=number]:focus {
+      border-color: #0a64c8;
+      outline: none;
     }
-    ul {
-      padding-left: 20px;
+    #login {
+      text-align: center;
+      padding: 3em 0;
+    }
+    #dashboard p {
+      font-size: 1.1rem;
+      margin: 0.5em 0;
+    }
+    #dashboard strong {
+      color: #0a64c8;
+    }
+    ul#requestsList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border-top: 1px solid #e2e8f0;
+    }
+    ul#requestsList li {
+      padding: 0.75em 1em;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 500;
+      color: #334155;
+    }
+    ul#requestsList li:nth-child(odd) {
+      background: #f9fbff;
+    }
+    .status {
+      font-weight: 600;
+      padding: 0.1em 0.6em;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: white;
+    }
+    .status.Pending {
+      background-color: #0a64c8;
+    }
+    .status.Paid {
+      background-color: #22c55e;
+    }
+    #signOutBtn {
+      margin-top: 2em;
+      background-color: #ef4444;
+    }
+    #signOutBtn:hover {
+      background-color: #b91c1c;
     }
   </style>
 
@@ -35,106 +120,146 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-  <h1>Music Royalty Dashboard</h1>
-  <div id="login">
-    <button onclick="signIn()">Sign in with Google</button>
-  </div>
+  <main>
+    <h1>Music Royalty Dashboard</h1>
 
-  <div id="dashboard">
-    <p><strong>Welcome:</strong> <span id="user-email"></span></p>
-    <p><strong>Balance:</strong> $<span id="balance">0.00</span></p>
+    <div id="login">
+      <button id="loginBtn">Sign in with Google</button>
+    </div>
 
-    <h2>Request a Payout</h2>
-    <input type="number" id="payoutAmount" placeholder="Enter amount" />
-    <button onclick="requestPayout()">Submit Request</button>
+    <div id="dashboard">
+      <p><strong>Logged in as:</strong> <span id="userEmail"></span></p>
+      <p><strong>Balance:</strong> $<span id="balance">0.00</span></p>
 
-    <h2>Your Past Requests</h2>
-    <ul id="requestList"></ul>
+      <h2>Request a Payout</h2>
+      <input type="number" id="payoutAmount" placeholder="Enter amount" min="0.01" step="0.01" />
+      <button id="requestPayoutBtn">Submit Request</button>
 
-    <button onclick="signOut()">Sign Out</button>
-  </div>
+      <h2>Your Past Requests</h2>
+      <ul id="requestsList"></ul>
 
-  <script>
-    // 🔧 Paste your Firebase config below
-    const firebaseConfig = {
-      apiKey: "AIzaSyCS-ykifZL2-fhDVuI13t8WYV3a0ZYEfTQ",
-      authDomain: "musicroyaltydashboard.firebaseapp.com",
-      projectId: "musicroyaltydashboard",
-      storageBucket: "musicroyaltydashboard.firebasestorage.app",
-      messagingSenderId: "11241137292",
-      appId: "1:11241137292:web:06a7d43d5b555f417087a9"
-    };
+      <button id="signOutBtn">Sign Out</button>
+    </div>
+  </main>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+<script>
+  // ===== Paste your Firebase config here =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyCS-ykifZL2-fhDVuI13t8WYV3a0ZYEfTQ",
+  authDomain: "musicroyaltydashboard.firebaseapp.com",
+  projectId: "musicroyaltydashboard",
+  storageBucket: "musicroyaltydashboard.firebasestorage.app",
+  messagingSenderId: "11241137292",
+  appId: "1:11241137292:web:06a7d43d5b555f417087a9",
+  measurementId: "G-NX2X87YRLT"
+  };
 
-    // Sign in with Google
-    function signIn() {
-      auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-    }
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-    function signOut() {
-      auth.signOut();
-    }
+  const loginDiv = document.getElementById("login");
+  const dashboardDiv = document.getElementById("dashboard");
+  const loginBtn = document.getElementById("loginBtn");
+  const signOutBtn = document.getElementById("signOutBtn");
+  const userEmailSpan = document.getElementById("userEmail");
+  const balanceSpan = document.getElementById("balance");
+  const payoutAmountInput = document.getElementById("payoutAmount");
+  const requestPayoutBtn = document.getElementById("requestPayoutBtn");
+  const requestsList = document.getElementById("requestsList");
 
-    auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        document.getElementById("login").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        document.getElementById("user-email").textContent = user.email;
+  loginDiv.style.display = "block";
+  dashboardDiv.style.display = "none";
 
-        const userRef = db.collection("users").doc(user.uid);
-
-        // Create user doc if not exists
-        const doc = await userRef.get();
-        if (!doc.exists) {
-          await userRef.set({ email: user.email, balance: 0 });
-        }
-
-        // Show balance
-        userRef.onSnapshot((snap) => {
-          const data = snap.data();
-          document.getElementById("balance").textContent = data.balance.toFixed(2);
-        });
-
-        // Load payout requests
-        db.collection("payoutRequests")
-          .where("uid", "==", user.uid)
-          .orderBy("timestamp", "desc")
-          .onSnapshot((snap) => {
-            const list = document.getElementById("requestList");
-            list.innerHTML = "";
-            snap.forEach((doc) => {
-              const r = doc.data();
-              const li = document.createElement("li");
-              li.textContent = `$${r.amount} - ${r.status}`;
-              list.appendChild(li);
-            });
-          });
-
-      } else {
-        document.getElementById("login").style.display = "block";
-        document.getElementById("dashboard").style.display = "none";
-      }
+  loginBtn.addEventListener("click", () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(error => {
+      alert("Sign in failed: " + error.message);
+      console.error("Sign in error:", error);
     });
+  });
 
-    function requestPayout() {
-      const user = auth.currentUser;
-      const amount = parseFloat(document.getElementById("payoutAmount").value);
-      if (!amount || amount <= 0) return alert("Enter a valid amount");
+  signOutBtn.addEventListener("click", () => {
+    auth.signOut();
+  });
 
-      db.collection("payoutRequests").add({
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      loginDiv.style.display = "none";
+      dashboardDiv.style.display = "block";
+      userEmailSpan.textContent = user.email;
+
+      const userRef = db.collection("users").doc(user.uid);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        await userRef.set({ email: user.email, balance: 0 });
+      }
+
+      userRef.onSnapshot(doc => {
+        const data = doc.data();
+        balanceSpan.textContent = data.balance?.toFixed(2) || "0.00";
+      });
+
+      db.collection("payoutRequests")
+        .where("uid", "==", user.uid)
+        .orderBy("timestamp", "desc")
+        .onSnapshot(snapshot => {
+          requestsList.innerHTML = "";
+          snapshot.forEach(doc => {
+            const req = doc.data();
+            const amount = req.amount.toFixed(2);
+            const status = req.status || "Pending";
+            const date = req.timestamp
+              ? new Date(req.timestamp.seconds * 1000).toLocaleString()
+              : "";
+            const li = document.createElement("li");
+
+            li.innerHTML = `
+              <span>$${amount}</span>
+              <span class="status ${status}">${status}</span>
+              <span>${date}</span>
+            `;
+            requestsList.appendChild(li);
+          });
+        });
+    } else {
+      loginDiv.style.display = "block";
+      dashboardDiv.style.display = "none";
+      userEmailSpan.textContent = "";
+      balanceSpan.textContent = "0.00";
+      requestsList.innerHTML = "";
+    }
+  });
+
+  requestPayoutBtn.addEventListener("click", async () => {
+    const amount = parseFloat(payoutAmountInput.value);
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid amount greater than 0.");
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      alert("You must be signed in.");
+      return;
+    }
+
+    try {
+      await db.collection("payoutRequests").add({
         uid: user.uid,
         email: user.email,
         amount,
         status: "Pending",
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(() => {
-        alert("Payout request submitted.");
-        document.getElementById("payoutAmount").value = "";
       });
+      alert("Payout request submitted.");
+      payoutAmountInput.value = "";
+    } catch (e) {
+      alert("Error submitting request: " + e.message);
     }
-  </script>
+  });
+</script>
+
 </body>
 </html>
